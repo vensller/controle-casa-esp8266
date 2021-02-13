@@ -1,0 +1,14 @@
+import styled from 'styled-components/native';
+
+export const Container = styled.SafeAreaView`
+  flex: 1;
+  padding: 10px;
+`;
+
+export const Title = styled.Text`
+  font-size: 20px;
+  color: #fff;
+  font-weight: bold;
+  align-self: center;
+  margin: 30px 0;
+`;
