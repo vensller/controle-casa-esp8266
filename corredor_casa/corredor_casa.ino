@@ -37,10 +37,18 @@ int tempoLigado = 10; //minutos
 // Comandos socket
 const String ligar = "ligar";
 const String desligar = "desligar";
+const String mostrarLogs = "mostrarLogs";
+const String reiniciar = "reiniciar";
 
 // Variaveis controle
 bool ligadoServidor = false;
 bool ligadoSensor = false;
+String logs = "";
+
+void logInfo(String message) {
+  Serial.println(message);
+  logs += message + "\n";
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -57,7 +65,7 @@ void setup() {
     Serial.println("Connecting..");
   }
  
-  Serial.print("Connected to WiFi. IP:");
+  Serial.print("Connected to WiFi. IP: ");
   Serial.println(WiFi.localIP());
   Udp.begin(localPort);
   setSyncProvider(getNtpTime);
@@ -104,12 +112,12 @@ void verificarParaLigar(int valor1, int valor2) {
   }
   
   if (valor1 == 1) {
-    Serial.println("Ativado pelo Sensor 1");
+    logInfo("Ativado pelo Sensor 1");
     ligarLampadas();
   }  
   
   if (valor2 == 1) {
-    Serial.println("Ativado pelo Sensor 2");
+    logInfo("Ativado pelo Sensor 2");
     ligarLampadas();
   }    
 }
@@ -120,7 +128,7 @@ void verificarParaDesligar(int valor1, int valor2) {
   }
   
   if ((valor1 == 0) && (valor2 == 0)) {
-    Serial.println("Sem movimento, desligando lampadas");
+    logInfo("Sem movimento, desligando lampadas");
     desligarLampadas();
   }
 }
@@ -151,14 +159,26 @@ void verificarRequest() {
 
   Serial.println(request);
 
+  if (request == mostrarLogs) {
+    server.send(200, "text/plain", logs);    
+    return;
+  }
+
+  if (request == reiniciar) {
+    server.send(200, "text/plain", "OK");       
+    delay(1000); 
+    ESP.restart();
+    return;
+  }
+
   if (request == ligar) {    
-    Serial.println("Ligado pelo server");
+    logInfo("Ligado pelo server");
     digitalWrite(pinoRELE1, LOW);
     ligadoServidor = true;        
   }
 
   if (request == desligar) {
-    Serial.println("Desligado pelo server");
+    logInfo("Desligado pelo server");
     digitalWrite(pinoRELE1, HIGH);
     ligadoServidor = false;        
   }
