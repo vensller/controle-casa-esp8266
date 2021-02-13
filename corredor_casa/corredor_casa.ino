@@ -31,7 +31,7 @@ const int inicio = 19;
 const int pinoRELE1 = D5;
 
 // Configuração da lampada
-int tempoLigado = 10; //minutos
+int tempoLigado = 300; //segundos
 
 
 // Comandos socket
@@ -44,11 +44,8 @@ const String reiniciar = "reiniciar";
 bool ligadoServidor = false;
 bool ligadoSensor = false;
 String logs = "";
-
-void logInfo(String message) {
-  Serial.println(message);
-  logs += message + "\n";
-}
+time_t logDay = 0;
+time_t horaLigadoSensor = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -99,11 +96,30 @@ void setup() {
 void ligarLampadas() {
   digitalWrite(pinoRELE1, LOW);
   ligadoSensor = true;
+  horaLigadoSensor = now();  
 }
 
 void desligarLampadas() {
   digitalWrite(pinoRELE1, HIGH);
   ligadoSensor = false;
+  horaLigadoSensor = 0;
+}
+
+String getDigits(int digits) {
+  if (digits < 10) {
+    return "0" + String(digits);  
+  }else return String(digits);
+}
+
+String getDateAsString() {
+  String dataString = getDigits(day()) + "/" + getDigits(month()) + "/" + String(year()) + " - " + getDigits(hour()) + ":" + getDigits(minute()) + ":" + getDigits(second());
+  return dataString;
+}
+
+void logInfo(String message) {
+  String messageToPrint = message + ". " + getDateAsString();
+  Serial.println(messageToPrint);
+  logs += messageToPrint + "\n";
 }
 
 void verificarParaLigar(int valor1, int valor2) {
@@ -112,25 +128,29 @@ void verificarParaLigar(int valor1, int valor2) {
   }
   
   if (valor1 == 1) {
-    logInfo("Ativado pelo Sensor 1");
+    logInfo("Ativado pelo sensor de trás");
     ligarLampadas();
   }  
   
   if (valor2 == 1) {
-    logInfo("Ativado pelo Sensor 2");
+    logInfo("Ativado pelo sensor da frente");
     ligarLampadas();
   }    
+  delay(500);
 }
 
 void verificarParaDesligar(int valor1, int valor2) {
   if (!ligadoSensor) {
     return;
   }
+
+  int diff = now() - horaLigadoSensor;
   
-  if ((valor1 == 0) && (valor2 == 0)) {
+  if ((valor1 == 0) && (valor2 == 0) && (diff >= tempoLigado)) {
     logInfo("Sem movimento, desligando lampadas");
     desligarLampadas();
   }
+  delay(500);
 }
 
 void verificarSensores() {
@@ -180,10 +200,20 @@ void verificarRequest() {
   if (request == desligar) {
     logInfo("Desligado pelo server");
     digitalWrite(pinoRELE1, HIGH);
-    ligadoServidor = false;        
+    ligadoServidor = false;      
+    ligadoSensor = false;  
+    horaLigadoSensor = 0;
   }
 
   server.send(200, "text/plain", "OK");  
+  delay(500);
+}
+
+void limparLogs() {
+  if (day() != logDay) {
+    logs = "";
+    logDay = day();    
+  }
 }
 
 void loop() {
@@ -193,7 +223,7 @@ void loop() {
 //      digitalClockDisplay();
 //    }
 //  }
-  
+  limparLogs();  
   verificarSensores();
   
   server.handleClient();  
